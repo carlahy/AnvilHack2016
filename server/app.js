@@ -83,17 +83,52 @@ app.get('/callback', function(req, res) {
             refresh_token = body.refresh_token;
 
         var options = {
-          url: 'https://api.spotify.com/v1/me/tracks',
+          url: 'https://api.spotify.com/v1/me/tracks?offset=0&limit=50',
+          headers: { 'Authorization': 'Bearer ' + access_token },
+          json: true,
+          limit: 50
+        };
+
+        var tracks = {
+          url: 'https://api.spotify.com/v1/me/tracks?offset=0&limit=50',
+          headers: { 'Authorization': 'Bearer ' + access_token },
+          json: true,
+          limit: 50
+        };
+
+        const track_features_url = 'https://api.spotify.com/v1/audio-features/';
+        var track_features = {
+          url: 'https://api.spotify.com/v1/audio-features/',
           headers: { 'Authorization': 'Bearer ' + access_token },
           json: true
         };
 
         // use the access token to access the Spotify Web API
         request.get(options, function(error, response, body) {
-          console.log(body);
+          //console.log(body);
         });
 
         // WE ARE GOING TO DO STUFF HERE
+        var axis_values = ['danceability', 'energy', 'loudness', 'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo'];
+        var user_tracks = [];
+        request.get(tracks, function(error, response, body) {
+            console.log("=== Tracks ===");
+            
+            for(var i=0; i<body.items.length; i++) {
+              user_tracks.push({"name": body.items[i].track.name, "id": body.items[i].track.id });
+              track_features.url = track_features_url.concat(user_tracks[i].id);
+              (function(user_track){
+                request.get(track_features, function(error, response, body) {
+                  // console.log(body);
+                  //for(var v of axis_values) {
+                    user_track.x = body['danceability'];
+                    user_track.y = body['speechiness'];
+                  //}
+                  console.log(user_track);
+                });
+              })(user_tracks[i]);
+            }    
+        });
 
         res.json({
           message: "hello"
@@ -116,6 +151,17 @@ app.get('/callback', function(req, res) {
     });
   }
 });
+
+app.get('/api/cluster/:x/:y', function(error, response, body) {
+
+});
+
+// function get_axis_values() {
+
+//     var x =
+//     var y = 
+//     return { "x": , "y" :}
+// };
 
 app.get('/refresh_token', function(req, res) {
 
