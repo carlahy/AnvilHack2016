@@ -119,12 +119,9 @@ app.get('/callback', function(req, res) {
               track_features.url = track_features_url.concat(user_tracks[i].id);
               (function(user_track){
                 request.get(track_features, function(error, response, body) {
-                  // console.log(body);
-                  //for(var v of axis_values) {
                     user_track.x = body['danceability'];
                     user_track.y = body['speechiness'];
-                  //}
-                  console.log(user_track);
+                    console.log(user_track);
                 });
               })(user_tracks[i]);
             }    
@@ -152,16 +149,37 @@ app.get('/callback', function(req, res) {
   }
 });
 
-app.get('/api/cluster/:x/:y', function(error, response, body) {
-
+app.param('x', function(req, res, next, x){
+    req.x = x;
+    next();
 });
 
-// function get_axis_values() {
+app.param('y', function(req, res, next, y){
+    req.y = y;
+    next();
+});
 
-//     var x =
-//     var y = 
-//     return { "x": , "y" :}
-// };
+app.get('/api/cluster/:x/:y', function(request, response, body) {
+      var axis_values = ['danceability', 'energy', 'loudness', 'speechiness', 'acousticness', 'instrumentalness', 'liveness', 'valence', 'tempo'];
+        var user_tracks = [];
+        var x_axis = request.x;
+        var y_axis = request.y;
+        request.get(tracks, function(error, response, body) {
+            console.log("=== Tracks ===");
+            
+            for(var i=0; i<body.items.length; i++) {
+              user_tracks.push({"name": body.items[i].track.name, "id": body.items[i].track.id });
+              track_features.url = track_features_url.concat(user_tracks[i].id);
+              (function(user_track){
+                request.get(track_features, function(error, response, body) {
+                    user_track.x = body[x_axis];
+                    user_track.y = body[y_axis];
+                    console.log(user_track);
+                });
+              })(user_tracks[i]);
+            }    
+        });
+});
 
 app.get('/refresh_token', function(req, res) {
 
