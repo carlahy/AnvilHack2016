@@ -3,4 +3,15 @@
 
     <string name="hello_world">Hello world!</string>
     <string name="action_settings">Settings</string>
+    <string-array name="axis_selection">
+        <item>Danceability</item>
+        <item>Energy</item>
+        <item>Loudness</item>
+        <item>Speechiness</item>
+        <item>Acousticness</item>
+        <item>Instrumentalness</item>
+        <item>Liveness</item>
+        <item>Valence</item>
+        <item>Tempo</item>
+    </string-array>
 </resources>

@@ -5,6 +5,10 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
+import android.widget.Spinner;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -15,7 +19,6 @@ import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.series.DataPoint;
-import com.jjoe64.graphview.series.LineGraphSeries;
 import com.jjoe64.graphview.series.PointsGraphSeries;
 import com.spotify.sdk.android.authentication.AuthenticationClient;
 import com.spotify.sdk.android.authentication.AuthenticationRequest;
@@ -31,7 +34,7 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 
 
-public class MainActivity extends Activity implements ConnectionStateCallback {
+public class MainActivity extends Activity implements ConnectionStateCallback, AdapterView.OnItemSelectedListener {
 
     // TODO: Replace with your client ID
     private static final String CLIENT_ID = "92685aa42f484569b44bbf91733a5bbb";
@@ -46,6 +49,7 @@ public class MainActivity extends Activity implements ConnectionStateCallback {
     private static final int REQUEST_CODE = 1337;
 
     private Player mPlayer;
+    private GraphView graph;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -60,6 +64,8 @@ public class MainActivity extends Activity implements ConnectionStateCallback {
         AuthenticationRequest request = builder.build();
 
         AuthenticationClient.openLoginActivity(this, REQUEST_CODE, request);
+        graph = (GraphView) findViewById(R.id.graph);
+        set_axis();
     }
 
     @Override
@@ -87,64 +93,62 @@ public class MainActivity extends Activity implements ConnectionStateCallback {
             e.printStackTrace();
         }
 
-        final String URL = "http://10.100.196.75:8888/api/cluster/danceability/loudness";
-        JsonObjectRequest req = new JsonObjectRequest(Request.Method.POST, URL, info,
-                new Response.Listener<JSONObject>() {
-                    @Override
-                    public void onResponse(JSONObject response) {
-                        Log.d("hello", response.toString());
-                        ArrayList<Point> points = new ArrayList<>();
-                        ArrayList<Point> centroids = new ArrayList<>();
-                        try {
-                            JSONArray arr = response.getJSONArray("tracks");
-                            for(int i=0; i<arr.length(); i++) {
-                                String name = arr.getJSONObject(i).getString("name");
-                                String id = arr.getJSONObject(i).getString("id");
-                                if(arr.getJSONObject(i).isNull("x") || arr.getJSONObject(i).isNull("y")) {
-                                    continue;
+            final String URL = "http://10.100.196.75:8888/api/cluster/danceability/energy";
+            JsonObjectRequest req = new JsonObjectRequest(Request.Method.POST, URL, info,
+                    new Response.Listener<JSONObject>() {
+                        @Override
+                        public void onResponse(JSONObject response) {
+                            Log.d("hello", response.toString());
+                            ArrayList<Point> points = new ArrayList<>();
+                            ArrayList<Point> centroids = new ArrayList<>();
+                            try {
+                                JSONArray arr = response.getJSONArray("tracks");
+                                for (int i = 0; i < arr.length(); i++) {
+                                    String name = arr.getJSONObject(i).getString("name");
+                                    String id = arr.getJSONObject(i).getString("id");
+                                    if (arr.getJSONObject(i).isNull("x") || arr.getJSONObject(i).isNull("y")) {
+                                        continue;
+                                    }
+                                    double x = arr.getJSONObject(i).getDouble("x");
+                                    double y = arr.getJSONObject(i).getDouble("y");
+
+                                    points.add(new Point(id, name, x, y));
                                 }
-                                double x = arr.getJSONObject(i).getDouble("x");
-                                double y = arr.getJSONObject(i).getDouble("y");
 
-                                points.add(new Point(id, name, x, y));
+                                Log.d("hello", "here");
+
+                                arr = response.getJSONArray("centroids");
+                                Log.d("hello", arr.toString());
+                                for (int i = 0; i < arr.length(); i++) {
+
+                                    double x = arr.getJSONArray(i).getDouble(0);
+                                    double y = arr.getJSONArray(i).getDouble(1);
+
+                                    Log.d("point", x + " " + y);
+
+                                    centroids.add(new Point(x, y));
+                                }
+
+                            } catch (JSONException e) {
+                                e.printStackTrace();
                             }
 
-                            Log.d("hello", "here");
+                            plotPoints(points, Color.BLUE);
+                            plotPoints(centroids, Color.RED);
 
-                            arr = response.getJSONArray("centroids");
-                            Log.d("hello", arr.toString());
-                            for(int i=0; i<arr.length(); i++) {
-
-                                double x = arr.getJSONArray(i).getDouble(0);
-                                double y = arr.getJSONArray(i).getDouble(1);
-
-                                Log.d("point", x + " " + y);
-
-                                centroids.add(new Point(x, y));
-                            }
-
-                        } catch (JSONException e) {
-                            e.printStackTrace();
                         }
+                    }, new Response.ErrorListener() {
+                @Override
+                public void onErrorResponse(VolleyError error) {
+                    VolleyLog.e("Error: ", error.getMessage());
+                }
+            });
 
-                        plotPoints(points, Color.BLUE);
-                        plotPoints(centroids, Color.RED);
+            queue.add(req);
 
-                    }
-                }, new Response.ErrorListener() {
-            @Override
-            public void onErrorResponse(VolleyError error) {
-                VolleyLog.e("Error: ", error.getMessage());
-            }
-        });
-
-        queue.add(req);
     }
 
-
     private void plotPoints(ArrayList<Point> points, int color) {
-
-        GraphView graph = (GraphView) findViewById(R.id.graph);
 
         ArrayList<DataPoint> dataPoints = new ArrayList<>();
 
@@ -162,6 +166,37 @@ public class MainActivity extends Activity implements ConnectionStateCallback {
         PointsGraphSeries<DataPoint> series = new PointsGraphSeries<DataPoint>(dataArr);
         series.setColor(color);
         graph.addSeries(series);
+    }
+
+    public void set_axis() {
+        Spinner x_axis = (Spinner) findViewById(R.id.x_axis);
+        Spinner y_axis = (Spinner) findViewById(R.id.y_axis);
+        // Create an ArrayAdapter using the string array and a default spinner layout
+        ArrayAdapter<CharSequence> adapter = ArrayAdapter.createFromResource(this,
+                R.array.axis_selection, android.R.layout.simple_spinner_item);
+        // Specify the layout to use when the list of choices appears
+        adapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        // Apply the adapter to the spinner
+        x_axis.setAdapter(adapter);
+        y_axis.setAdapter(adapter);
+
+        x_axis.setOnItemSelectedListener(this);
+        y_axis.setOnItemSelectedListener(this);
+    }
+
+    public void onItemSelected(final AdapterView<?> parent, View view,
+                               final int pos, long id) {
+
+        if (parent.getId() == R.id.x_axis) {
+            graph.getGridLabelRenderer().setHorizontalAxisTitle(parent.getItemAtPosition(pos).toString());
+        } else if (parent.getId() == R.id.y_axis) {
+            graph.getGridLabelRenderer().setVerticalAxisTitle(parent.getItemAtPosition(pos).toString());
+        }
+        graph.onDataChanged(true, true); //TODO: CANADA
+    }
+
+    public void onNothingSelected(AdapterView<?> parent) {
+        // Another interface callback
     }
 
     @Override
