@@ -5,6 +5,9 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.os.Bundle;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
+import android.widget.Toast;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -29,6 +32,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 
 public class MainActivity extends Activity implements ConnectionStateCallback {
@@ -47,16 +51,26 @@ public class MainActivity extends Activity implements ConnectionStateCallback {
 
     private Player mPlayer;
 
+    private Button button;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        button = (Button)findViewById(R.id.button);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                createPlaylist();
+            }
+        });
+
         queue = Volley.newRequestQueue(this);
 
         AuthenticationRequest.Builder builder =
                 new AuthenticationRequest.Builder(CLIENT_ID, AuthenticationResponse.Type.TOKEN, REDIRECT_URI);
-        builder.setScopes(new String[]{"user-read-private user-library-read"});
+        builder.setScopes(new String[]{"user-read-private user-library-read playlist-modify-public playlist-modify-private"});
         AuthenticationRequest request = builder.build();
 
         AuthenticationClient.openLoginActivity(this, REQUEST_CODE, request);
@@ -72,7 +86,8 @@ public class MainActivity extends Activity implements ConnectionStateCallback {
             if (response.getType() == AuthenticationResponse.Type.TOKEN) {
                 Log.d("hello", response.getAccessToken());
                 accessToken = response.getAccessToken();
-                makeRequest();
+                //makeRequest();
+                Toast.makeText(this,"got token", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -107,6 +122,7 @@ public class MainActivity extends Activity implements ConnectionStateCallback {
                                 double y = arr.getJSONObject(i).getDouble("y");
 
                                 points.add(new Point(id, name, x, y));
+                                Log.d("track", id);
                             }
 
                             Log.d("hello", "here");
@@ -163,6 +179,45 @@ public class MainActivity extends Activity implements ConnectionStateCallback {
         series.setColor(color);
         graph.addSeries(series);
     }
+
+
+    private void createPlaylist() {
+        String name = "abc";
+        String[] tracks = {"spotify:track:2VEZx7NWsZ1D0eJ4uv5Fym", "spotify:track:1pKYYY0dkg23sQQXi0Q5zN", "" +
+                "spotify:track:0MyY4WcN7DIfbSmp5yej5z"};
+
+        JSONArray tracks_arr = new JSONArray(Arrays.asList(tracks));
+
+
+        JSONObject info = new JSONObject();
+
+        try {
+            info.put("accessToken", accessToken);
+            info.put("tracks", tracks_arr);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        final String URL = "http://10.100.196.75:8888/api/playlist/create/" + name;
+        JsonObjectRequest req = new JsonObjectRequest(Request.Method.POST, URL, info,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        Log.d("hello", response.toString());
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                VolleyLog.e("Error: ", error.getMessage());
+            }
+        });
+
+        queue.add(req);
+    }
+
+
+
+
 
     @Override
     public void onLoggedIn() {
