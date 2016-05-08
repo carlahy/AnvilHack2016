@@ -15,14 +15,20 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_below="@+id/graph"
-        android:layout_marginTop="50dp"/>
+        android:layout_marginTop="15dp"/>
 
     <Spinner
         android:id="@+id/y_axis"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/x_axis"
-        android:layout_marginTop="25dp"/>
+        android:layout_below="@+id/x_axis"/>
+
+    <ListView
+        android:id="@+id/playlist"
+        android:layout_height="wrap_content"
+        android:layout_width="match_parent"
+        android:layout_below="@id/y_axis">
+    </ListView>
 
     <Button
         android:layout_width="wrap_content"

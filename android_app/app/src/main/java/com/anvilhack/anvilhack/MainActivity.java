@@ -9,6 +9,7 @@ import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
 import android.widget.Button;
+import android.widget.ListView;
 import android.widget.Spinner;
 import android.widget.Toast;
 
@@ -58,6 +59,7 @@ public class MainActivity extends Activity implements ConnectionStateCallback, A
     private GraphView graph;
 
     private Button button;
+    private ListView playlistView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -82,6 +84,7 @@ public class MainActivity extends Activity implements ConnectionStateCallback, A
         AuthenticationClient.openLoginActivity(this, REQUEST_CODE, request);
         graph = (GraphView) findViewById(R.id.graph);
         set_axis();
+        showPlaylist();
     }
 
     @Override
@@ -225,7 +228,6 @@ public class MainActivity extends Activity implements ConnectionStateCallback, A
         graph.addSeries(series);
     }
 
-
     private void createPlaylist() {
         String name = "abc";
         String[] tracks = {"spotify:track:2VEZx7NWsZ1D0eJ4uv5Fym", "spotify:track:1pKYYY0dkg23sQQXi0Q5zN", "" +
@@ -258,6 +260,14 @@ public class MainActivity extends Activity implements ConnectionStateCallback, A
         });
 
         queue.add(req);
+    }
+
+    public void showPlaylist() {
+        String[] values = {"Si", "world", "goodbye", ":)", "word word"};
+        playlistView = (ListView)findViewById(R.id.playlist);
+        ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
+                android.R.layout.simple_list_item_1, android.R.id.text1, values);
+        playlistView.setAdapter(adapter);
     }
 
     public void set_axis() {
