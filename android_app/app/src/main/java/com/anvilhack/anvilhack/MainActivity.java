@@ -76,6 +76,13 @@ public class MainActivity extends Activity implements ConnectionStateCallback, A
 
         queue = Volley.newRequestQueue(this);
 
+        login();
+
+        graph = (GraphView) findViewById(R.id.graph);
+        set_axis();
+    }
+
+    public void login() {
         AuthenticationRequest.Builder builder =
                 new AuthenticationRequest.Builder(CLIENT_ID, AuthenticationResponse.Type.TOKEN, REDIRECT_URI);
         builder.setScopes(new String[]{"user-read-private user-library-read playlist-modify-public playlist-modify-private"});
@@ -97,13 +104,15 @@ public class MainActivity extends Activity implements ConnectionStateCallback, A
             if (response.getType() == AuthenticationResponse.Type.TOKEN) {
                 Log.d("hello", response.getAccessToken());
                 accessToken = response.getAccessToken();
-                makeRequest();
+                //makeRequest();
                 Toast.makeText(this,"got token", Toast.LENGTH_SHORT).show();
             }
         }
     }
 
-    private void makeRequest() {
+    private void makeRequest(String str1, String str2) {
+
+        if(accessToken == null) return;
 
         JSONObject info = new JSONObject();
 
@@ -113,7 +122,19 @@ public class MainActivity extends Activity implements ConnectionStateCallback, A
             e.printStackTrace();
         }
 
-            final String URL = "http://10.100.196.75:8888/api/cluster/danceability/energy";
+        /*
+        String str1 = "danceability";
+        if(graph.getGridLabelRenderer().getHorizontalAxisTitle() != null) {
+            str1 = graph.getGridLabelRenderer().getHorizontalAxisTitle().toString().toLowerCase();
+        }
+
+        String str2 = "danceability";
+        if(graph.getGridLabelRenderer().getVerticalAxisTitle() != null) {
+            str2 = graph.getGridLabelRenderer().getVerticalAxisTitle().toString().toLowerCase();
+        }
+        */
+
+            final String URL = "http://10.100.196.75:8888/api/cluster/" + str1 + "/" + str2;
             JsonObjectRequest req = new JsonObjectRequest(Request.Method.POST, URL, info,
                     new Response.Listener<JSONObject>() {
                         @Override
@@ -171,6 +192,7 @@ public class MainActivity extends Activity implements ConnectionStateCallback, A
     private void plotPoints(ArrayList<Point> points, ArrayList<Point> centroids) {
 
         GraphView graph = (GraphView) findViewById(R.id.graph);
+        graph.removeAllSeries();
 
         ArrayList<Cluster> clusters = new ArrayList<>();
 
@@ -222,7 +244,7 @@ public class MainActivity extends Activity implements ConnectionStateCallback, A
         series.setOnDataPointTapListener(new OnDataPointTapListener() {
             @Override
             public void onTap(Series series, DataPointInterface dataPointInterface) {
-                Log.d("tap", ""+series.getColor());
+                Log.d("tap", "" + series.getColor());
             }
         });
         graph.addSeries(series);
@@ -294,7 +316,20 @@ public class MainActivity extends Activity implements ConnectionStateCallback, A
         } else if (parent.getId() == R.id.y_axis) {
             graph.getGridLabelRenderer().setVerticalAxisTitle(parent.getItemAtPosition(pos).toString());
         }
-        graph.onDataChanged(true, true); //TODO: CANADA
+        //graph.onDataChanged(true, true); //TODO: CANADA
+        String str1 = "danceability";
+        if(graph.getGridLabelRenderer().getHorizontalAxisTitle() != null) {
+            str1 = graph.getGridLabelRenderer().getHorizontalAxisTitle().toString().toLowerCase();
+        }
+
+        String str2 = "danceability";
+        if(graph.getGridLabelRenderer().getVerticalAxisTitle() != null) {
+            str2 = graph.getGridLabelRenderer().getVerticalAxisTitle().toString().toLowerCase();
+        }
+        makeRequest(
+                str1,
+                str2
+                );
     }
 
     public void onNothingSelected(AdapterView<?> parent) {

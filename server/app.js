@@ -104,6 +104,7 @@ function extractFeatures(body, x_type, y_type, access_token, res, next) {
   var user_tracks = [];
   var count = 0;
 
+      console.log(body);
       var items_length = body.items.length;
 
       for(var i=0; i<body.items.length; i++) {
