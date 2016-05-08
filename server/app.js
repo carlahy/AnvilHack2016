@@ -48,6 +48,16 @@ app.param('y_type', function(req, res, next, type){
   return next();
 });
 
+app.param('id', function(req, res, next, id){
+  req.id = id;
+  return next();
+});
+
+app.param('name', function(req, res, next, name){
+  req.name = name;
+  return next();
+});
+
 app.post('/api/cluster/:x_type/:y_type', function(req, res, next) {
   console.log("got request");
   var accessToken = req.body.accessToken;
@@ -165,5 +175,73 @@ function clusterData(user_tracks, res) {
     });
   });
 
+}
+
+
+app.post('/api/playlist/create/:name', function(req, res, next) {
+  console.log("trying to create playlist");
+  var access_token = req.body.accessToken;
+  var name = req.name;
+  var tracks = req.body.tracks;
+  console.log("============== tracks ==========");
+  console.log(tracks);
+  var options = {
+    url: 'https://api.spotify.com/v1/me' ,
+    headers: { 'Authorization': 'Bearer ' + access_token },
+    json: true
+  };
+
+  request.get(options, function(error, response, body) {
+    var id = body.id;
+    console.log("id = " + id);
+    makePlaylist(access_token, id, name, tracks, res);
+  });
+  console.log("end");
+  res.json({
+    message : "hello"
+  });
+});
+
+function makePlaylist(access_token, id, name, tracks, res) {
+  var options = {
+    url: 'https://api.spotify.com/v1/users/' + id + '/playlists' ,
+    headers: { 'Authorization': 'Bearer ' + access_token },
+    json: true,
+    body: {
+      name: name,
+      public: true
+    }
+  };
+
+  request.post(options, function(error, response, body) {
+    if(!error){
+      console.log(body);
+      var playlist_id = body.id;
+      console.log("playlist_id = " + playlist_id);
+      console.log("success");
+      addTracks(access_token, id, playlist_id, name, tracks, res);
+    }
+  });
+}
+
+function addTracks(access_token, user_id, playlist_id, name, tracks, res) {
+  var url = 'https://api.spotify.com/v1/users/' + user_id + '/playlists/' + playlist_id + '/tracks';
+  console.log(url);
+  var options = {
+    url: url ,
+    headers: { 'Authorization': 'Bearer ' + access_token },
+    json: true,
+    body: {
+      uris : tracks
+    }
+  };
+
+  request.post(options, function(error, response, body) {
+    console.log(error);
+    if(!error){
+      console.log(body);
+      console.log("Tracs added");
+    }
+  });
 }
 

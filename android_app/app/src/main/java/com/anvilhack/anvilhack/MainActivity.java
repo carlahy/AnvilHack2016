@@ -8,7 +8,9 @@ import android.util.Log;
 import android.view.View;
 import android.widget.AdapterView;
 import android.widget.ArrayAdapter;
+import android.widget.Button;
 import android.widget.Spinner;
+import android.widget.Toast;
 
 import com.android.volley.Request;
 import com.android.volley.RequestQueue;
@@ -19,7 +21,10 @@ import com.android.volley.toolbox.JsonObjectRequest;
 import com.android.volley.toolbox.Volley;
 import com.jjoe64.graphview.GraphView;
 import com.jjoe64.graphview.series.DataPoint;
+import com.jjoe64.graphview.series.DataPointInterface;
+import com.jjoe64.graphview.series.OnDataPointTapListener;
 import com.jjoe64.graphview.series.PointsGraphSeries;
+import com.jjoe64.graphview.series.Series;
 import com.spotify.sdk.android.authentication.AuthenticationClient;
 import com.spotify.sdk.android.authentication.AuthenticationRequest;
 import com.spotify.sdk.android.authentication.AuthenticationResponse;
@@ -32,6 +37,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 
 
 public class MainActivity extends Activity implements ConnectionStateCallback, AdapterView.OnItemSelectedListener {
@@ -51,16 +57,26 @@ public class MainActivity extends Activity implements ConnectionStateCallback, A
     private Player mPlayer;
     private GraphView graph;
 
+    private Button button;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        button = (Button)findViewById(R.id.button);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                createPlaylist();
+            }
+        });
+
         queue = Volley.newRequestQueue(this);
 
         AuthenticationRequest.Builder builder =
                 new AuthenticationRequest.Builder(CLIENT_ID, AuthenticationResponse.Type.TOKEN, REDIRECT_URI);
-        builder.setScopes(new String[]{"user-read-private user-library-read"});
+        builder.setScopes(new String[]{"user-read-private user-library-read playlist-modify-public playlist-modify-private"});
         AuthenticationRequest request = builder.build();
 
         AuthenticationClient.openLoginActivity(this, REQUEST_CODE, request);
@@ -79,6 +95,7 @@ public class MainActivity extends Activity implements ConnectionStateCallback, A
                 Log.d("hello", response.getAccessToken());
                 accessToken = response.getAccessToken();
                 makeRequest();
+                Toast.makeText(this,"got token", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -128,13 +145,12 @@ public class MainActivity extends Activity implements ConnectionStateCallback, A
 
                                     centroids.add(new Point(x, y));
                                 }
+                                plotPoints(points, centroids);
 
                             } catch (JSONException e) {
                                 e.printStackTrace();
                             }
 
-                            plotPoints(points, Color.BLUE);
-                            plotPoints(centroids, Color.RED);
 
                         }
                     }, new Response.ErrorListener() {
@@ -148,24 +164,100 @@ public class MainActivity extends Activity implements ConnectionStateCallback, A
 
     }
 
-    private void plotPoints(ArrayList<Point> points, int color) {
 
-        ArrayList<DataPoint> dataPoints = new ArrayList<>();
+    private void plotPoints(ArrayList<Point> points, ArrayList<Point> centroids) {
 
-        for(Point p : points) {
-            if(p.getX() != null && p.getY() != null) {
-                dataPoints.add(new DataPoint(p.getX(), p.getY()));
-            }
+        GraphView graph = (GraphView) findViewById(R.id.graph);
+
+        ArrayList<Cluster> clusters = new ArrayList<>();
+
+        for(Point p : centroids) {
+            clusters.add(new Cluster(p));
         }
 
-        DataPoint[] dataArr = new DataPoint[dataPoints.size()];
-        for(int i=0; i<dataArr.length; i++){
-            dataArr[i] = dataPoints.get(i);
+        for(Point p : points) {
+            if(p.getX() == null || p.getY() == null) {
+                continue;
+            }
+            Cluster best_c = clusters.get(0);
+            double dist = best_c.distFromCentre(p);
+            for(Cluster c : clusters) {
+                if(c.distFromCentre(p) < dist) {
+                    dist = c.distFromCentre(p);
+                    best_c = c;
+                }
+            }
+
+            best_c.addPoint(p);
+        }
+
+        int[] colors = {Color.RED, Color.BLUE, Color.GREEN, Color.BLACK};
+
+        for(int i=0; i<clusters.size(); i++) {
+            plotCluster(clusters.get(i), graph, colors[i]);
+        }
+
+    }
+
+    private void plotCluster(Cluster cluster, GraphView graph, int color) {
+
+        DataPoint[] dataArr = new DataPoint[cluster.size() - 1];
+
+        for(int i=0; i<cluster.getPoints().size(); i++){
+            dataArr[i] = new DataPoint(cluster.getPoints().get(i).getX(), cluster.getPoints().get(i).getY());
         }
 
         PointsGraphSeries<DataPoint> series = new PointsGraphSeries<DataPoint>(dataArr);
         series.setColor(color);
         graph.addSeries(series);
+
+        dataArr = new DataPoint[1];
+        dataArr[0] = new DataPoint(cluster.getCentroid().getX(), cluster.getCentroid().getY());
+        series = new PointsGraphSeries<DataPoint>(dataArr);
+        series.setColor(color);
+        series.setShape(PointsGraphSeries.Shape.RECTANGLE);
+        series.setOnDataPointTapListener(new OnDataPointTapListener() {
+            @Override
+            public void onTap(Series series, DataPointInterface dataPointInterface) {
+                Log.d("tap", ""+series.getColor());
+            }
+        });
+        graph.addSeries(series);
+    }
+
+
+    private void createPlaylist() {
+        String name = "abc";
+        String[] tracks = {"spotify:track:2VEZx7NWsZ1D0eJ4uv5Fym", "spotify:track:1pKYYY0dkg23sQQXi0Q5zN", "" +
+                "spotify:track:0MyY4WcN7DIfbSmp5yej5z"};
+
+        JSONArray tracks_arr = new JSONArray(Arrays.asList(tracks));
+
+
+        JSONObject info = new JSONObject();
+
+        try {
+            info.put("accessToken", accessToken);
+            info.put("tracks", tracks_arr);
+        } catch (JSONException e) {
+            e.printStackTrace();
+        }
+
+        final String URL = "http://10.100.196.75:8888/api/playlist/create/" + name;
+        JsonObjectRequest req = new JsonObjectRequest(Request.Method.POST, URL, info,
+                new Response.Listener<JSONObject>() {
+                    @Override
+                    public void onResponse(JSONObject response) {
+                        Log.d("hello", response.toString());
+                    }
+                }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                VolleyLog.e("Error: ", error.getMessage());
+            }
+        });
+
+        queue.add(req);
     }
 
     public void set_axis() {
