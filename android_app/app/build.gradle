@@ -34,6 +34,6 @@ dependencies {
 
     // This library handles music playback
     compile 'com.spotify.sdk:spotify-player:1.0.0-beta11@aar'
-
+    compile 'com.mcxiaoke.volley:library-aar:1.0.0'
     compile 'com.android.support:appcompat-v7:23.1.1'
 }
