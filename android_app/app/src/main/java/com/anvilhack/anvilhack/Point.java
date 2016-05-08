@@ -17,6 +17,14 @@ public class Point {
         this.id = id;
     }
 
+    public String getName() {
+        return this.name;
+    }
+
+    public String getId() {
+        return this.id;
+    }
+
     public Point(double x, double y) {
         this.x = x;
         this.y = y;

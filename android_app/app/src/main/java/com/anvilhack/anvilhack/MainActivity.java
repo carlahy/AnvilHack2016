@@ -61,6 +61,8 @@ public class MainActivity extends Activity implements ConnectionStateCallback, A
     private Button button;
     private ListView playlistView;
 
+    private Cluster currentCluster = null;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -70,7 +72,7 @@ public class MainActivity extends Activity implements ConnectionStateCallback, A
         button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                createPlaylist();
+                createPlaylist(currentCluster);
             }
         });
 
@@ -91,7 +93,7 @@ public class MainActivity extends Activity implements ConnectionStateCallback, A
         AuthenticationClient.openLoginActivity(this, REQUEST_CODE, request);
         graph = (GraphView) findViewById(R.id.graph);
         set_axis();
-        showPlaylist();
+
     }
 
     @Override
@@ -224,7 +226,7 @@ public class MainActivity extends Activity implements ConnectionStateCallback, A
 
     }
 
-    private void plotCluster(Cluster cluster, GraphView graph, int color) {
+    private void plotCluster(final Cluster cluster, GraphView graph, int color) {
 
         DataPoint[] dataArr = new DataPoint[cluster.size() - 1];
 
@@ -245,15 +247,25 @@ public class MainActivity extends Activity implements ConnectionStateCallback, A
             @Override
             public void onTap(Series series, DataPointInterface dataPointInterface) {
                 Log.d("tap", "" + series.getColor());
+                showPlaylist(cluster);
             }
         });
         graph.addSeries(series);
     }
 
-    private void createPlaylist() {
-        String name = "abc";
-        String[] tracks = {"spotify:track:2VEZx7NWsZ1D0eJ4uv5Fym", "spotify:track:1pKYYY0dkg23sQQXi0Q5zN", "" +
-                "spotify:track:0MyY4WcN7DIfbSmp5yej5z"};
+    private void createPlaylist(Cluster cluster) {
+
+        if(cluster == null){
+            return;
+        }
+
+        String name = "new_playlist";
+
+        String[] tracks = new String[cluster.getPoints().size()];
+
+        for(int i=0; i<cluster.getPoints().size(); i++){
+            tracks[i] = "spotify:track:" + cluster.getPoints().get(i).getId();
+        }
 
         JSONArray tracks_arr = new JSONArray(Arrays.asList(tracks));
 
@@ -284,8 +296,17 @@ public class MainActivity extends Activity implements ConnectionStateCallback, A
         queue.add(req);
     }
 
-    public void showPlaylist() {
-        String[] values = {"Si", "world", "goodbye", ":)", "word word"};
+    public void showPlaylist(Cluster cluster) {
+
+
+        currentCluster = cluster;
+
+        String[] values = new String[cluster.getPoints().size()];
+
+        for(int i=0; i<cluster.getPoints().size(); i++) {
+            values[i] = cluster.getPoints().get(i).getName();
+        }
+
         playlistView = (ListView)findViewById(R.id.playlist);
         ArrayAdapter<String> adapter = new ArrayAdapter<String>(this,
                 android.R.layout.simple_list_item_1, android.R.id.text1, values);
