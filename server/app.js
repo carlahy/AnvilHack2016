@@ -122,11 +122,14 @@ function extractFeatures(body, x_type, y_type, access_token, res, next) {
               //returnData(user_tracks, res);
               console.log("returning");
               console.log(user_tracks);
+              clusterData(user_tracks, res);
+              /*
               res.json(
               {
                 result : user_tracks
               }
               );
+              */
               //res.json(user_tracks);
               
               //callback(user_tracks);
@@ -135,5 +138,33 @@ function extractFeatures(body, x_type, y_type, access_token, res, next) {
         })(user_tracks[i]); 
         
       }   
+}
+
+var KMEANS = require('kmeanie');
+
+function clusterData(user_tracks, res) {
+
+  var points = [];
+  for(var i=0; i<user_tracks.length; i++) {
+    if(user_tracks[i].x && user_tracks[i].y) {
+      points.push([user_tracks[i].x, user_tracks[i].y]);
+    }
+  }
+
+  var kmeans = new KMEANS();
+
+  kmeans.compile(points, 2, function(err, data){
+ 
+    if(err){ console.error(err); return; }
+ 
+    console.log('converged!');
+    console.log(data);
+
+    res.json({
+      tracks : user_tracks,
+      centroids : data.centers
+    });
+  });
+
 }
 
